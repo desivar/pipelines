@@ -1,6 +1,7 @@
 const Job = require('../models/Job');
 
-// Controller functions
+// @desc    Get all jobs
+// @route   GET /api/jobs
 const getJobs = async (req, res) => {
   try {
     const jobs = await Job.find();
@@ -10,6 +11,8 @@ const getJobs = async (req, res) => {
   }
 };
 
+// @desc    Create a new job
+// @route   POST /api/jobs
 const createJob = async (req, res) => {
   const job = new Job(req.body);
   try {
@@ -20,7 +23,6 @@ const createJob = async (req, res) => {
   }
 };
 
-// Export all functions
 module.exports = {
   getJobs,
   createJob
