@@ -1,7 +1,5 @@
-// controllers/jobController.js
 const Job = require('../models/Job');
 
-// @desc    Get all jobs
 const getJobs = async (req, res) => {
   try {
     const jobs = await Job.find();
@@ -11,7 +9,6 @@ const getJobs = async (req, res) => {
   }
 };
 
-// @desc    Create a job
 const createJob = async (req, res) => {
   const job = new Job(req.body);
   try {
@@ -22,8 +19,4 @@ const createJob = async (req, res) => {
   }
 };
 
-// Make sure all functions are properly exported
-module.exports = {
-  getJobs,
-  createJob
-};
+module.exports = { getJobs, createJob };
