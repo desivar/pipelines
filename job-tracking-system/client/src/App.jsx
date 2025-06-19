@@ -1,87 +1,21 @@
 
 
 import React, { useState, useEffect } from 'react';
-import { User, Plus, Settings, LogOut, Briefcase, Users, GitBranch, FileText, Upload, MessageSquare, Calendar, ChevronRight, Search, Filter, Bell } from 'lucide-react';
-
-// Mock data for development
-const mockUser = {
-  id: 1,
-  name: "Desire Developer",
-  email: "desi@example.com",
-  avatar: "https://github.com/desivar/lastf/blob/main/my-pipeline-app/public/cod2.jpg", // A more generic avatar link
-  githubUsername: "desivar"
-};
-
-const mockPipelines = [
-  {
-    id: 1,
-    name: "Web Development",
-    description: "Standard web development workflow",
-    steps: ["Initial Contact", "Requirements", "Design", "Development", "Testing", "Deployment"],
-    jobCount: 8,
-    createdAt: "2025-01-15"
-  },
-  {
-    id: 2,
-    name: "Mobile App Development", 
-    description: "Mobile application development process",
-    steps: ["Discovery", "Wireframes", "UI/UX", "Development", "Beta Testing", "App Store"],
-    jobCount: 3,
-    createdAt: "2025-01-10"
-  }
-];
-
-const mockJobs = [
-  {
-    id: 1,
-    title: "E-commerce Website",
-    customer: "ABC Corp",
-    pipeline: "Web Development",
-    currentStep: "Development",
-    status: "active",
-    dueDate: "2025-07-01",
-    progress: 60
-  },
-  {
-    id: 2,
-    title: "Restaurant App",
-    customer: "Tasty Bites",
-    pipeline: "Mobile App Development", 
-    currentStep: "UI/UX",
-    status: "active",
-    dueDate: "2025-07-15",
-    progress: 30
-  },
-  {
-    id: 3,
-    title: "Portfolio Site",
-    customer: "Jane Smith",
-    pipeline: "Web Development",
-    currentStep: "Testing",
-    status: "active", 
-    dueDate: "2025-06-20",
-    progress: 85
-  }
-];
-
-const mockCustomers = [
-  {
-    id: 1,
-    name: "ABC Corp",
-    email: "contact@abccorp.com",
-    phone: "+1-555-0123",
-    activeJobs: 2,
-    totalJobs: 5
-  },
-  {
-    id: 2,
-    name: "Tasty Bites",
-    email: "info@tastybites.com", 
-    phone: "+1-555-0456",
-    activeJobs: 1,
-    totalJobs: 2
-  }
-];
+import { 
+  User, Plus, Settings, LogOut, Briefcase, Users, GitBranch, FileText, 
+  Upload, MessageSquare, Calendar, ChevronRight, Search, Filter, Bell 
+} from 'lucide-react';
+import { 
+  fetchPipelines, 
+  fetchJobs, 
+  fetchCustomers,
+  getCurrentUser,
+  loginWithGitHub,
+  logoutUser,
+  createJob,
+  createCustomer,
+  createPipeline
+} from './api';
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -91,40 +25,265 @@ const App = () => {
   const [jobs, setJobs] = useState([]);
   const [customers, setCustomers] = useState([]);
 
+  // Authentication and data loading
   useEffect(() => {
-    // Simulate checking authentication
-    const checkAuth = () => {
-      const authStatus = localStorage.getItem('isAuthenticated');
-      if (authStatus === 'true') {
-        setIsAuthenticated(true);
-        setUser(mockUser);
-        setPipelines(mockPipelines);
-        setJobs(mockJobs);
-        setCustomers(mockCustomers);
+    const checkAuth = async () => {
+      try {
+        // Handle GitHub callback
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        
+        if (token) {
+          localStorage.setItem('token', token);
+          window.location.href = '/'; // Clean the URL
+        }
+        
+        // Verify existing token
+        if (localStorage.getItem('token')) {
+          const userRes = await getCurrentUser();
+          setUser(userRes.data);
+          setIsAuthenticated(true);
+          
+          // Load initial data
+          const [pipelinesRes, jobsRes, customersRes] = await Promise.all([
+            fetchPipelines(),
+            fetchJobs(),
+            fetchCustomers()
+          ]);
+          
+          setPipelines(pipelinesRes.data);
+          setJobs(jobsRes.data);
+          setCustomers(customersRes.data);
+        }
+      } catch (err) {
+        console.error('Authentication check failed:', err);
+        localStorage.removeItem('token');
       }
     };
+    
     checkAuth();
   }, []);
 
   const handleGitHubLogin = () => {
-    // Simulate GitHub OAuth flow
-    // In real implementation, this would redirect to GitHub OAuth
-    localStorage.setItem('isAuthenticated', 'true');
-    setIsAuthenticated(true);
-    setUser(mockUser);
-    setPipelines(mockPipelines);
-    setJobs(mockJobs);
-    setCustomers(mockCustomers);
+    loginWithGitHub();
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('isAuthenticated');
-    setIsAuthenticated(false);
-    setUser(null);
-    setPipelines([]);
-    setJobs([]);
-    setCustomers([]);
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+      localStorage.removeItem('token');
+      setIsAuthenticated(false);
+      setUser(null);
+      setPipelines([]);
+      setJobs([]);
+      setCustomers([]);
+    } catch (err) {
+      console.error('Logout failed:', err);
+    }
   };
+
+  // Create new items
+  const handleCreateJob = async () => {
+    try {
+      const newJob = {
+        title: "New Job",
+        customer: "New Customer",
+        pipeline: pipelines[0]?.name || "General",
+        currentStep: "Initial Contact",
+        status: "active",
+        dueDate: new Date().toISOString().split('T')[0],
+        progress: 0
+      };
+      const res = await createJob(newJob);
+      setJobs([...jobs, res.data]);
+    } catch (err) {
+      console.error('Failed to create job:', err);
+    }
+  };
+
+  const handleCreateCustomer = async () => {
+    try {
+      const newCustomer = {
+        name: "New Customer",
+        email: "new@customer.com",
+        phone: "+0000000000",
+        activeJobs: 0,
+        totalJobs: 0
+      };
+      const res = await createCustomer(newCustomer);
+      setCustomers([...customers, res.data]);
+    } catch (err) {
+      console.error('Failed to create customer:', err);
+    }
+  };
+
+  const handleCreatePipeline = async () => {
+    try {
+      const newPipeline = {
+        name: "New Pipeline",
+        description: "Description of the new pipeline",
+        steps: ["Step 1", "Step 2", "Step 3"],
+        jobCount: 0
+      };
+      const res = await createPipeline(newPipeline);
+      setPipelines([...pipelines, res.data]);
+    } catch (err) {
+      console.error('Failed to create pipeline:', err);
+    }
+  };
+
+  // Navigation Item Component
+  const NavItem = ({ icon: Icon, label, active, onClick }) => (
+    <button
+      onClick={onClick}
+      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
+        active 
+          ? 'bg-blue-50 text-blue-700 border border-blue-200' 
+          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+      }`}
+    >
+      <Icon className="w-5 h-5" />
+      {label}
+    </button>
+  );
+
+  // Stat Card Component
+  const StatCard = ({ title, value, icon: Icon, color }) => {
+    const colorClasses = {
+      blue: 'bg-blue-50 text-blue-600',
+      green: 'bg-green-50 text-green-600', 
+      purple: 'bg-purple-50 text-purple-600',
+      orange: 'bg-orange-50 text-orange-600'
+    };
+
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-gray-600">{title}</p>
+            <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
+          </div>
+          <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${colorClasses[color]}`}>
+            <Icon className="w-6 h-6" />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Job Item Component
+  const JobItem = ({ job }) => (
+    <div className="p-6 hover:bg-gray-50 transition-colors">
+      <div className="flex items-center justify-between">
+        <div className="flex-1">
+          <div className="flex items-center gap-3">
+            <h3 className="font-medium text-gray-900">{job.title}</h3>
+            <span className={`text-xs px-2 py-1 rounded-full ${
+              job.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+            }`}>
+              {job.status}
+            </span>
+          </div>
+          <p className="text-sm text-gray-600 mt-1">{job.customer} • {job.pipeline}</p>
+          <div className="flex items-center gap-4 mt-3">
+            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+              {job.currentStep}
+            </span>
+            <span className="text-xs text-gray-500">Due: {job.dueDate}</span>
+            <div className="flex items-center gap-2">
+              <div className="w-20 bg-gray-200 rounded-full h-1.5">
+                <div 
+                  className="bg-blue-500 h-1.5 rounded-full" 
+                  style={{width: `${job.progress}%`}}
+                ></div>
+              </div>
+              <span className="text-xs text-gray-600">{job.progress}%</span>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
+            <MessageSquare className="w-4 h-4" />
+          </button>
+          <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
+            <Upload className="w-4 h-4" />
+          </button>
+          <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
+            <Settings className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Customer Item Component
+  const CustomerItem = ({ customer }) => (
+    <div className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-md transition-shadow">
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex-1">
+          <h3 className="font-semibold text-gray-900">{customer.name}</h3>
+          <p className="text-sm text-gray-600 mt-1">{customer.email}</p>
+          <p className="text-sm text-gray-600">{customer.phone}</p>
+        </div>
+        <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
+          <Settings className="w-4 h-4" />
+        </button>
+      </div>
+      
+      <div className="space-y-3">
+        <div className="flex justify-between text-sm">
+          <span className="text-gray-600">Active Jobs</span>
+          <span className="font-medium text-gray-900">{customer.activeJobs}</span>
+        </div>
+        <div className="flex justify-between text-sm">
+          <span className="text-gray-600">Total Jobs</span>
+          <span className="font-medium text-gray-900">{customer.totalJobs}</span>
+        </div>
+      </div>
+
+      <div className="mt-4 pt-4 border-t border-gray-200">
+        <button className="w-full text-blue-600 hover:text-blue-700 text-sm font-medium">
+          View Details
+        </button>
+      </div>
+    </div>
+  );
+
+  // Pipeline Item Component
+  const PipelineItem = ({ pipeline }) => (
+    <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex-1">
+          <h3 className="font-semibold text-gray-900">{pipeline.name}</h3>
+          <p className="text-sm text-gray-600 mt-1">{pipeline.description}</p>
+          <p className="text-xs text-gray-500 mt-2">{pipeline.jobCount} active jobs</p>
+        </div>
+        <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
+          <Settings className="w-4 h-4" />
+        </button>
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-sm font-medium text-gray-700">Pipeline Steps:</p>
+        <div className="flex flex-wrap gap-2">
+          {pipeline.steps.map((step, index) => (
+            <span key={index} className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-md">
+              {step}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-4 pt-4 border-t border-gray-200 flex gap-2">
+        <button className="flex-1 text-blue-600 hover:text-blue-700 text-sm font-medium">
+          Edit Pipeline
+        </button>
+        <button className="flex-1 text-gray-600 hover:text-gray-700 text-sm font-medium">
+          View Jobs
+        </button>
+      </div>
+    </div>
+  );
 
   // Login Page Component
   const LoginPage = () => (
@@ -159,7 +318,7 @@ const App = () => {
     </div>
   );
 
-  // Navigation Component
+  // Sidebar Component
   const Sidebar = () => (
     <div className="w-64 bg-white border-r border-gray-200 h-full flex flex-col">
       <div className="p-6 border-b border-gray-200">
@@ -202,21 +361,7 @@ const App = () => {
     </div>
   );
 
-  const NavItem = ({ icon: Icon, label, active, onClick }) => (
-    <button
-      onClick={onClick}
-      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
-        active 
-          ? 'bg-blue-50 text-blue-700 border border-blue-200' 
-          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-      }`}
-    >
-      <Icon className="w-5 h-5" />
-      {label}
-    </button>
-  );
-
-  // Dashboard Component
+  // Dashboard View
   const Dashboard = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -225,163 +370,97 @@ const App = () => {
           <p className="text-gray-600">Welcome back, {user?.name}</p>
         </div>
         <div className="flex gap-3">
-          <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
+          <button 
+            onClick={handleCreateJob}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+          >
             <Plus className="w-4 h-4" />
             New Job
           </button>
         </div>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <StatCard title="Active Jobs" value={jobs.filter(j => j.status === 'active').length} icon={Briefcase} color="blue" />
         <StatCard title="Total Customers" value={customers.length} icon={Users} color="green" />
         <StatCard title="Pipelines" value={pipelines.length} icon={GitBranch} color="purple" />
-        <StatCard title="Due This Week" value={2} icon={Calendar} color="orange" />
+        <StatCard title="Due This Week" value={jobs.filter(j => {
+          const dueDate = new Date(j.dueDate);
+          const today = new Date();
+          const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+          return dueDate >= today && dueDate <= nextWeek;
+        }).length} icon={Calendar} color="orange" />
       </div>
 
-      {/* Recent Jobs */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="p-6 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900">Recent Jobs</h2>
         </div>
         <div className="divide-y divide-gray-200">
           {jobs.slice(0, 5).map(job => (
-            <div key={job.id} className="p-6 hover:bg-gray-50 transition-colors">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <h3 className="font-medium text-gray-900">{job.title}</h3>
-                  <p className="text-sm text-gray-600">{job.customer} • {job.pipeline}</p>
-                  <div className="flex items-center gap-4 mt-2">
-                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                      {job.currentStep}
-                    </span>
-                    <span className="text-xs text-gray-500">Due: {job.dueDate}</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-24 bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-blue-500 h-2 rounded-full" 
-                      style={{width: `${job.progress}%`}}
-                    ></div>
-                  </div>
-                  <span className="text-sm text-gray-600">{job.progress}%</span>
-                  <ChevronRight className="w-4 h-4 text-gray-400" />
-                </div>
-              </div>
-            </div>
+            <JobItem key={job._id || job.id} job={job} />
           ))}
         </div>
       </div>
     </div>
   );
 
-  const StatCard = ({ title, value, icon: Icon, color }) => {
-    const colorClasses = {
-      blue: 'bg-blue-50 text-blue-600',
-      green: 'bg-green-50 text-green-600', 
-      purple: 'bg-purple-50 text-purple-600',
-      orange: 'bg-orange-50 text-orange-600'
-    };
+  // Jobs View
+  const JobsView = () => {
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const filteredJobs = jobs.filter(job => 
+      job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      job.customer.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     return (
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-gray-600">{title}</p>
-            <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
+            <h1 className="text-2xl font-bold text-gray-900">Jobs</h1>
+            <p className="text-gray-600">Manage all your active jobs</p>
           </div>
-          <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${colorClasses[color]}`}>
-            <Icon className="w-6 h-6" />
+          <button 
+            onClick={handleCreateJob}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Create Job
+          </button>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-200">
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex items-center gap-4">
+              <div className="flex-1 relative">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input 
+                  type="text" 
+                  placeholder="Search jobs..." 
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <button className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                <Filter className="w-4 h-4" />
+                Filter
+              </button>
+            </div>
+          </div>
+
+          <div className="divide-y divide-gray-200">
+            {filteredJobs.map(job => (
+              <JobItem key={job._id || job.id} job={job} />
+            ))}
           </div>
         </div>
       </div>
     );
   };
 
-  // Jobs View Component
-  const JobsView = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Jobs</h1>
-          <p className="text-gray-600">Manage all your active jobs</p>
-        </div>
-        <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
-          <Plus className="w-4 h-4" />
-          Create Job
-        </button>
-      </div>
-
-      <div className="bg-white rounded-xl border border-gray-200">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center gap-4">
-            <div className="flex-1 relative">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input 
-                type="text" 
-                placeholder="Search jobs..." 
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            <button className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-              <Filter className="w-4 h-4" />
-              Filter
-            </button>
-          </div>
-        </div>
-
-        <div className="divide-y divide-gray-200">
-          {jobs.map(job => (
-            <div key={job.id} className="p-6 hover:bg-gray-50 transition-colors">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3">
-                    <h3 className="font-medium text-gray-900">{job.title}</h3>
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      job.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {job.status}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-600 mt-1">{job.customer} • {job.pipeline}</p>
-                  <div className="flex items-center gap-4 mt-3">
-                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                      {job.currentStep}
-                    </span>
-                    <span className="text-xs text-gray-500">Due: {job.dueDate}</span>
-                    <div className="flex items-center gap-2">
-                      <div className="w-20 bg-gray-200 rounded-full h-1.5">
-                        <div 
-                          className="bg-blue-500 h-1.5 rounded-full" 
-                          style={{width: `${job.progress}%`}}
-                        ></div>
-                      </div>
-                      <span className="text-xs text-gray-600">{job.progress}%</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
-                    <MessageSquare className="w-4 h-4" />
-                  </button>
-                  <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
-                    <Upload className="w-4 h-4" />
-                  </button>
-                  <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
-                    <Settings className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-
-  // Customers View Component
+  // Customers View
   const CustomersView = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -389,7 +468,10 @@ const App = () => {
           <h1 className="text-2xl font-bold text-gray-900">Customers</h1>
           <p className="text-gray-600">Manage your customer relationships</p>
         </div>
-        <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
+        <button 
+          onClick={handleCreateCustomer}
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+        >
           <Plus className="w-4 h-4" />
           Add Customer
         </button>
@@ -397,41 +479,13 @@ const App = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {customers.map(customer => (
-          <div key={customer.id} className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex-1">
-                <h3 className="font-semibold text-gray-900">{customer.name}</h3>
-                <p className="text-sm text-gray-600 mt-1">{customer.email}</p>
-                <p className="text-sm text-gray-600">{customer.phone}</p>
-              </div>
-              <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
-                <Settings className="w-4 h-4" />
-              </button>
-            </div>
-            
-            <div className="space-y-3">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Active Jobs</span>
-                <span className="font-medium text-gray-900">{customer.activeJobs}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Total Jobs</span>
-                <span className="font-medium text-gray-900">{customer.totalJobs}</span>
-              </div>
-            </div>
-
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <button className="w-full text-blue-600 hover:text-blue-700 text-sm font-medium">
-                View Details
-              </button>
-            </div>
-          </div>
+          <CustomerItem key={customer._id || customer.id} customer={customer} />
         ))}
       </div>
     </div>
   );
 
-  // Pipelines View Component  
+  // Pipelines View
   const PipelinesView = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -439,7 +493,10 @@ const App = () => {
           <h1 className="text-2xl font-bold text-gray-900">Pipelines</h1>
           <p className="text-gray-600">Manage your workflow pipelines</p>
         </div>
-        <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
+        <button 
+          onClick={handleCreatePipeline}
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+        >
           <Plus className="w-4 h-4" />
           Create Pipeline
         </button>
@@ -447,38 +504,7 @@ const App = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {pipelines.map(pipeline => (
-          <div key={pipeline.id} className="bg-white rounded-xl border border-gray-200 p-6">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex-1">
-                <h3 className="font-semibold text-gray-900">{pipeline.name}</h3>
-                <p className="text-sm text-gray-600 mt-1">{pipeline.description}</p>
-                <p className="text-xs text-gray-500 mt-2">{pipeline.jobCount} active jobs</p>
-              </div>
-              <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
-                <Settings className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-gray-700">Pipeline Steps:</p>
-              <div className="flex flex-wrap gap-2">
-                {pipeline.steps.map((step, index) => (
-                  <span key={index} className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-md">
-                    {step}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-4 pt-4 border-t border-gray-200 flex gap-2">
-              <button className="flex-1 text-blue-600 hover:text-blue-700 text-sm font-medium">
-                Edit Pipeline
-              </button>
-              <button className="flex-1 text-gray-600 hover:text-gray-700 text-sm font-medium">
-                View Jobs
-              </button>
-            </div>
-          </div>
+          <PipelineItem key={pipeline._id || pipeline.id} pipeline={pipeline} />
         ))}
       </div>
     </div>
