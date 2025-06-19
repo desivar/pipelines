@@ -2,7 +2,8 @@ const Job = require('../models/Job');
 
 const getJobs = async (req, res) => {
   try {
-    const jobs = await Job.find();
+    // Only get jobs for the authenticated user
+    const jobs = await Job.find({ user: req.user });
     res.json(jobs);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -10,8 +11,14 @@ const getJobs = async (req, res) => {
 };
 
 const createJob = async (req, res) => {
-  const job = new Job(req.body);
   try {
+    // Add user to job data
+    const jobData = {
+      ...req.body,
+      user: req.user // Add the authenticated user's ID
+    };
+    
+    const job = new Job(jobData);
     const newJob = await job.save();
     res.status(201).json(newJob);
   } catch (err) {
@@ -19,4 +26,8 @@ const createJob = async (req, res) => {
   }
 };
 
-module.exports = { getJobs, createJob };
+module.exports = {
+  getJobs,
+  createJob
+  // Add other controller methods as needed
+};
