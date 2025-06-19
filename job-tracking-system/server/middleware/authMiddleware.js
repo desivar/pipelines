@@ -1,6 +1,7 @@
-// server/middlewares/authMiddleware.js
+// Simple auth middleware example
 const authMiddleware = (req, res, next) => {
   // Your authentication logic here
+  console.log('Auth middleware running');
   next();
 };
 
