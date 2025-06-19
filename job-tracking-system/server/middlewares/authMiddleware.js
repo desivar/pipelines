@@ -1,6 +1,17 @@
-// Simple version that will work with your frontend
-module.exports = (req, res, next) => {
-  // Skip actual authentication but keep the structure
-  console.log('Auth middleware passed (simplified for homework)');
-  next();
+// Middleware for JWT authentication
+const jwt = require("jsonwebtoken");
+
+const authMiddleware = (req, res, next) => {
+    const token = req.header("Authorization")?.replace("Bearer ", "");
+    if (!token) return res.status(401).json({ error: "No token provided" });
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        req.user = decoded;
+        next();
+    } catch (err) {
+        res.status(401).json({ error: "Invalid token" });
+    }
 };
+
+module.exports = authMiddleware;
