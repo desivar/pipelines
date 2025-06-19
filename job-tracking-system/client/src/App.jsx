@@ -64,9 +64,11 @@ const App = () => {
   }, []);
 
   const handleGitHubLogin = () => {
-    loginWithGitHub();
-  };
-
+  // Clear any old token first
+  localStorage.removeItem('token');
+  // Force full page redirect to backend GitHub auth endpoint
+  window.location.href = 'http://localhost:5500/api/auth/github';
+};
   const handleLogout = async () => {
     try {
       await logoutUser();
