@@ -71,3 +71,4 @@ passport.use(
     }
   })
 );
+// Export the configured passport
