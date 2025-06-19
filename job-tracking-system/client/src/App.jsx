@@ -66,19 +66,25 @@ const App = () => {
     );
   }
 
-  return (
-    <div className="h-screen bg-gray-50">
-      <div className="p-8">
-        <h1 className="text-2xl font-bold">Welcome, {user?.name}</h1>
-        <button 
-          onClick={handleLogout}
-          className="mt-4 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded"
-        >
-          Logout
-        </button>
-      </div>
-    </div>
-  );
-};
+// WITH this debug version:
+return (
+  <div className="h-screen bg-gray-50 p-8">
+    <h1 className="text-2xl font-bold">
+      {isAuthenticated ? "Dashboard" : "Not Authenticated"}
+    </h1>
+    <pre className="mt-4 p-4 bg-gray-100 rounded">
+      {JSON.stringify({ isAuthenticated, user }, null, 2)}
+    </pre>
+    
+    {/* Optional: Add a logout button for testing */}
+    <button 
+      onClick={handleLogout}
+      className="mt-4 bg-red-500 text-white px-4 py-2 rounded"
+    >
+      Logout
+    </button>
+  </div>
+);
+}
 
 export default App;
