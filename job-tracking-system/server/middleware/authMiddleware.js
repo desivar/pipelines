@@ -1,8 +1,6 @@
-// Simple authentication middleware
-const authMiddleware = (req, res, next) => {
-  console.log('Authentication middleware running');
-  // Add your actual authentication logic here
-  next(); // Proceed to the next middleware/route handler
+// Simple version that will work with your frontend
+module.exports = (req, res, next) => {
+  // Skip actual authentication but keep the structure
+  console.log('Auth middleware passed (simplified for homework)');
+  next();
 };
-
-module.exports = authMiddleware;
