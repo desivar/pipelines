@@ -1,0 +1,31 @@
+const express = require('express');
+const cors = require('cors');
+const passport = require('passport');
+const connectDB = require('./config/db');
+require('dotenv').config();
+require('./config/passport');
+
+// Connect to database
+connectDB();
+
+// Initialize app
+const app = express();
+
+// Middleware
+app.use(express.json());
+app.use(cors());
+app.use(passport.initialize());
+
+// Routes
+app.use('/auth', require('./routes/authRoutes'));
+app.use('/api/pipelines', require('./routes/pipelineRoutes'));
+app.use('/api/jobs', require('./routes/jobRoutes'));
+app.use('/api/customers', require('./routes/customerRoutes'));
+
+// Error handling
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).send('Something broke!');
+});
+
+module.exports = app;
