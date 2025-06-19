@@ -71,4 +71,4 @@ passport.use(
     }
   })
 );
-// Export the configured passport
+// Export the configured passportpassport-github2
