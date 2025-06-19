@@ -4,17 +4,19 @@ import {
   User, Plus, Settings, LogOut, Briefcase, Users, GitBranch, FileText, 
   Upload, MessageSquare, Calendar, ChevronRight, Search, Filter, Bell 
 } from 'lucide-react';
-import { 
-  fetchPipelines, 
-  fetchJobs, 
-  fetchCustomers,
-  getCurrentUser,
-  loginWithGitHub,
-  logoutUser,
-  createJob,
-  createCustomer,
-  createPipeline
-} from './api';
+
+// Mock API functions - replace with your actual API calls
+const api = {
+  fetchPipelines: async () => ({ data: [] }),
+  fetchJobs: async () => ({ data: [] }),
+  fetchCustomers: async () => ({ data: [] }),
+  getCurrentUser: async () => ({ data: {} }),
+  loginWithGitHub: async () => {},
+  logoutUser: async () => {},
+  createJob: async (job) => ({ data: job }),
+  createCustomer: async (customer) => ({ data: customer }),
+  createPipeline: async (pipeline) => ({ data: pipeline })
+};
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -34,20 +36,20 @@ const App = () => {
         
         if (token) {
           localStorage.setItem('token', token);
-          window.location.href = '/'; // Clean the URL
+          window.history.replaceState({}, '', window.location.pathname);
         }
-        
+
         // Verify existing token
         if (localStorage.getItem('token')) {
-          const userRes = await getCurrentUser();
+          const userRes = await api.getCurrentUser();
           setUser(userRes.data);
           setIsAuthenticated(true);
           
           // Load initial data
           const [pipelinesRes, jobsRes, customersRes] = await Promise.all([
-            fetchPipelines(),
-            fetchJobs(),
-            fetchCustomers()
+            api.fetchPipelines(),
+            api.fetchJobs(),
+            api.fetchCustomers()
           ]);
           
           setPipelines(pipelinesRes.data);
@@ -64,14 +66,13 @@ const App = () => {
   }, []);
 
   const handleGitHubLogin = () => {
-  // Clear any old token first
-  localStorage.removeItem('token');
-  // Force full page redirect to backend GitHub auth endpoint
-  window.location.href = 'http://localhost:5500/api/auth/github';
-};
+    localStorage.removeItem('token');
+    window.location.href = 'http://localhost:5500/api/auth/github';
+  };
+
   const handleLogout = async () => {
     try {
-      await logoutUser();
+      await api.logoutUser();
       localStorage.removeItem('token');
       setIsAuthenticated(false);
       setUser(null);
@@ -83,7 +84,6 @@ const App = () => {
     }
   };
 
-  // Create new items
   const handleCreateJob = async () => {
     try {
       const newJob = {
@@ -95,7 +95,7 @@ const App = () => {
         dueDate: new Date().toISOString().split('T')[0],
         progress: 0
       };
-      const res = await createJob(newJob);
+      const res = await api.createJob(newJob);
       setJobs([...jobs, res.data]);
     } catch (err) {
       console.error('Failed to create job:', err);
@@ -111,7 +111,7 @@ const App = () => {
         activeJobs: 0,
         totalJobs: 0
       };
-      const res = await createCustomer(newCustomer);
+      const res = await api.createCustomer(newCustomer);
       setCustomers([...customers, res.data]);
     } catch (err) {
       console.error('Failed to create customer:', err);
@@ -126,7 +126,7 @@ const App = () => {
         steps: ["Step 1", "Step 2", "Step 3"],
         jobCount: 0
       };
-      const res = await createPipeline(newPipeline);
+      const res = await api.createPipeline(newPipeline);
       setPipelines([...pipelines, res.data]);
     } catch (err) {
       console.error('Failed to create pipeline:', err);
@@ -511,7 +511,6 @@ const App = () => {
     </div>
   );
 
-  // Main App Render
   if (!isAuthenticated) {
     return <LoginPage />;
   }
