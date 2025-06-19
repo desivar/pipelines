@@ -5,13 +5,16 @@ import {
   Upload, MessageSquare, Calendar, Search, Filter 
 } from 'lucide-react';
 
-// API functions (replace with your actual implementations)
+// Mock API functions - replace with your actual implementations
 const api = {
   fetchPipelines: async () => ({ data: [] }),
   fetchJobs: async () => ({ data: [] }),
   fetchCustomers: async () => ({ data: [] }),
   getCurrentUser: async () => ({ data: { name: "User", avatar: "", githubUsername: "user" } }),
-  logoutUser: async () => {}
+  logoutUser: async () => {},
+  createJob: async (job) => ({ data: job }),
+  createCustomer: async (customer) => ({ data: customer }),
+  createPipeline: async (pipeline) => ({ data: pipeline })
 };
 
 const App = () => {
@@ -66,45 +69,6 @@ const App = () => {
     window.location.href = 'http://localhost:5500/api/auth/github';
   };
 
-  const handleLogout = async () => {
-    try {
-      await api.logoutUser();
-      localStorage.removeItem('token');
-      setIsAuthenticated(false);
-      setUser(null);
-      setPipelines([]);
-      setJobs([]);
-      setCustomers([]);
-    } catch (err) {
-      console.error('Logout failed:', err);
-    }
-  };
-
-  /* REST OF YOUR COMPONENT CODE REMAINS EXACTLY THE SAME */
-  /* Include all your other components exactly as you had them: */
-  /* NavItem, StatCard, JobItem, CustomerItem, PipelineItem */
-  /* LoginPage, Sidebar, Dashboard, JobsView, CustomersView, PipelinesView */
-
-  if (!isAuthenticated) {
-    return <LoginPage />;
-  }
-
-  return (
-    <div className="h-screen bg-gray-50 flex">
-      <Sidebar />
-      <main className="flex-1 overflow-auto">
-        <div className="p-8">
-          {currentView === 'dashboard' && <Dashboard />}
-          {currentView === 'jobs' && <JobsView />}
-          {currentView === 'customers' && <CustomersView />}
-          {currentView === 'pipelines' && <PipelinesView />}
-        </div>
-      </main>
-    </div>
-  );
-};
-
-export default App;
   const handleLogout = async () => {
     try {
       await api.logoutUser();
@@ -546,6 +510,7 @@ export default App;
     </div>
   );
 
+  // Main render
   if (!isAuthenticated) {
     return <LoginPage />;
   }
