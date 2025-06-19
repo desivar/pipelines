@@ -6,6 +6,10 @@ const jobRoutes = require('./routes/jobRoutes');
 require('dotenv').config();
 require('./config/passport');
 
+const authRoutes = require('./routes/authRoutes');
+// ... other middleware ...
+app.use('/api/auth', authRoutes);
+
 // Connect to database
 connectDB();
 
