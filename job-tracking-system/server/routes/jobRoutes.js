@@ -1,10 +1,17 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middlewares/auth');
-const { getJobs, createJob } = require('../controllers/jobController');
+const jobController = require('../controllers/jobs');
+const authMiddleware = require('../middleware/auth'); // Add authentication middleware
 
-// These will work with your existing frontend
-router.get('/', auth, getJobs);       // Keeps auth structure
-router.post('/', auth, createJob);    // But uses simplified middleware
+// Secure all job routes
+router.use(authMiddleware);
+
+// GET all jobs (now protected)
+router.get('/', jobController.getJobs);
+
+// CREATE new job (protected)
+router.post('/', jobController.createJob);
+
+// Add other job routes (update, delete) as needed...
 
 module.exports = router;
