@@ -1,10 +1,15 @@
 const app = require('./app');
-const http = require('http');
-
+const mongoose = require('mongoose');
 const PORT = process.env.PORT || 5000;
 
-const server = http.createServer(app);
-
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// Database connection
+mongoose.connect('mongodb://localhost:27017/job-tracking', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
+.then(() => {
+  console.log('MongoDB connected');
+  // Start server only after DB connection
+  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+})
+.catch(err => console.error('MongoDB connection error:', err));
